@@ -1,3 +1,7 @@
+import gifAnimation.*;
+
+GifMaker gif;
+
 float i=0, scaleValue;
 int state=0;
 float lastI;
@@ -7,6 +11,10 @@ final int stateDuration = 350;
 
 void setup() {
   size(600, 600);
+
+  gif = new GifMaker(this, "export.gif");
+  gif.setRepeat(0);
+
   scaleValue = width/3;
   noStroke();
   smooth();
@@ -55,7 +63,7 @@ void doState() {
 
 void draw() {
 		translate(width/2, height/2);
-	i = easeValue(sin(2*PI*frameCount/stateDuration*2)+1.0, 0, 1, 2);
+	i = easeValue(sin(2*PI*frameCount/stateDuration)+1.0, 0, 1, 2);
 
 	background(#ffffff);
 	// fill(#ffffff, 20);
@@ -63,11 +71,6 @@ void draw() {
 	doState();
 
 	if (rising) {
-		if (i > -0.000000001 && i <=0) {
-
-			println(state);
-		}
-
 		if (i < lastI) {
 			state = (state + 1) % maxStates;
 			rising = false; // now falling
@@ -75,8 +78,16 @@ void draw() {
 	} else { // falling
 		if (i > lastI) {
 			rising = true;
+
+		    if (frameCount > stateDuration && state == 0) {
+		       gif.finish();
+		       exit();
+	        }
 		}
 	}
 
 	lastI = i;
+
+    gif.setDelay(20);
+    gif.addFrame();
 }
