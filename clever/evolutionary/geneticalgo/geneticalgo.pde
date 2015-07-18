@@ -1,11 +1,13 @@
 import java.util.*;
 
 final float p_crossover = 0.98;
-final float p_newGeneRate = 0.1;
+final float p_newGeneRate = 0.10;
 final float s = 1.5;
-final int step_x = (int)(5*s);
-final int step_y = (int)(5*s);
+final int mode = 10;
+final int step_x = (int)max(s*5, (s*15/mode));
+final int step_y = (int)max(s*5, (s*15/mode));
 final int gene_size = 100;
+
 
 Gene randomGene() {
 	Gene retval = new Gene(this);
@@ -14,6 +16,17 @@ Gene randomGene() {
 	}
 
 	return retval;
+}
+
+float calculateArea(int x[], int y[]) {
+	x[1] -= x[2];
+	y[1] -= y[2];
+	x[0] -= x[2];
+	y[0] -= y[2];
+
+	return 0.5 * (
+		x[0]*y[1] - x[1]*y[0]
+	);
 }
 
 class Gene implements Comparable {
@@ -33,13 +46,31 @@ class Gene implements Comparable {
 		}
 	}
 
+	void doFitness(float pixelCount, float targetCount) {
+		fitness = pixelCount / targetCount;
+	}
+
 	void calculateFitness(int w, int h, int target) {
+		// int x=-w, y=-h;
 		int x=0, y=0;
 		int pixelCount = 0;
+		fitness = 0.0;
+		int min_x = w, max_x = -w;
+		int min_y = h, max_y = -h;
+		float area = 0.0, totalArea = 0.0;
+		int[] tri_x, tri_y;
+		int targetArea = w*h;
 
-		for(int i=0; i<gene.length; i++) {
-			for(int c=0; c<8; c+=3) {
-				byte bit = (byte)((gene[i]>>c)&7);
+		tri_x = new int[3];
+		tri_y = new int[3];
+
+		for(int i=1; i<gene.length; i++) {
+			tri_x[2] = min_x;
+			tri_y[2] = min_y;
+			tri_x[1] = max_x;
+			tri_x[1] = max_y;
+			for(int c=0; c<8; c+=2) {
+				byte bit = (byte)((gene[i]>>c)&3);
 				switch(bit) {
 					case 0:
 						y += step_y;
@@ -68,15 +99,27 @@ class Gene implements Comparable {
 					case 7:
 						x -= step_x;
 						y -= step_y;
-						break;				}
+						break;
+				}
+				tri_x[0] = x;
+				tri_y[0] = y;
+
+				area = calculateArea(tri_x, tri_y);
+				totalArea += area;
 				if (x < -w || x > w || y < -h || y > h) {
-					fitness = (float)pixelCount / (float)target;
+					doFitness(area, -targetArea);
 					return;
 				}
-				pixelCount += step_x;
+				min_x = min(min_x, x);
+				min_y = min(min_y, y);
+				max_x = max(max_x, x);
+				max_y = max(max_y, y);
+
+				++pixelCount;
 			}
 		}
-		fitness = (float)pixelCount / (float)target;
+
+		doFitness(totalArea, targetArea);
 	}
 
 	void pointMutation(float rate) {
@@ -97,8 +140,8 @@ class Gene implements Comparable {
 	int compareTo(Object o) {
 		Gene other = (Gene)o;
 		return fitness < other.fitness ?
-		   1 : fitness > other.fitness ?
-		  -1 : 0;
+		    1 : fitness > other.fitness ?
+		   -1 : 0;
 	}
 
 	void pointMutation() {
@@ -106,18 +149,20 @@ class Gene implements Comparable {
 	}
 
 	void draw(PGraphics g) {
+		// int x=-g.width/2, y=-g.height/2;
 		int x=0, y=0;
 
 		g.beginDraw();
-		g.translate(patch.width/2, patch.height/2);
+		g.translate(g.width/2, g.height/2);
 		g.background(#efefef);
-		// g.stroke(#333333);
+		// g.stroke(#333333, 128);
+		// g.strokeWeight(5);
 		g.noStroke();
-		g.fill(#ffcccc);
-		g.beginShape();
+		g.fill(#ff0000, 64);
+		g.beginShape(TRIANGLE_STRIP);
 		for(int i=0; i<gene.length; i++) {
-			for(int c=0; c<8; c+=3) {
-				byte bit = (byte)((gene[i]>>c)&7);
+			for(int c=0; c<8; c+=2) {
+				byte bit = (byte)((gene[i]>>c)&3);
 				switch(bit) {
 					case 0:
 						y += step_y;
@@ -149,14 +194,14 @@ class Gene implements Comparable {
 						break;
 				}
 				if (x < -g.width/2 || x > g.width/2 || y < -g.height/2 || y > g.height/2) {
-					g.endShape(CLOSE);
+					g.endShape();
 					g.endDraw();
 					return;
 				}
-				g.curveVertex(x, y);
+				g.vertex(x, y);
 			}
 		}
-		g.endShape(CLOSE);
+		g.endShape();
 		g.endDraw();
 	}
 };
@@ -184,7 +229,7 @@ void reproduce(Gene[] selection, Gene[] children) {
 		}
 
 		children[i] = crossover(selection[i], selection[p2]);
-		children[i].pointMutation();
+		children[i].pointMutation(0.5);
 	}
 }
 
@@ -213,10 +258,10 @@ void setup() {
 		population[i] = randomGene();
 	}
 
-	patch = createGraphics((int)(50*s), (int)(40*s));
+	patch = createGraphics(width/mode, height/mode);
 	patch.stroke(#333333);
 
-	targetPixels = patch.width * patch.height;
+	targetPixels = gene_size*4;
 }
 
 void draw() {
@@ -233,21 +278,31 @@ void draw() {
 	Gene children[] = new Gene[population.length];
 
 	for(int i=0; i<population.length; i++) {
-		population[i].draw(patch);
-		image(patch, x, y);
+		if (mode == 10) {
+			population[i].draw(patch);
+			image(patch, x, y);
 
-		// fill(#efefef, 200);
-		// rect(x, y, patch.width, patch.height);
-		fill(#333333);
-		textSize(8);
-		text(str(population[i].fitness), x+5, y+patch.height/2-12, patch.width-5, patch.height/2+12);
-		x += patch.width;
-		if (x > (width - patch.width)) {
-			x = 0;
-			y += patch.height;
+			// fill(#efefef, 200);
+			// rect(x, y, patch.width, patch.height);
+			if (i == 1) {
+				fill(#333333);
+				textSize(8);
+				text(str(population[i].fitness), x+5, y+patch.height/2-12);
+			}
+			x += patch.width;
+			if (x > (width - patch.width)) {
+				x = 0;
+				y += patch.height;
+			}
 		}
-
 		selection[i] = binaryTournament(population);
+	}
+
+	if (mode == 1) {
+		population[0].draw(patch);
+		image(patch, 0, 0);
+		fill(#333333);
+		text(str(population[0].fitness), 5, height/2);
 	}
 
 	reproduce(selection, children);
