@@ -3,7 +3,7 @@ import java.util.*;
 final float p_crossover = 0.98;
 final float p_newGeneRate = 0.10;
 final float s = 1.5;
-final int mode = 10;
+final int mode = 1;
 final int step_x = (int)max(s*5, (s*15/mode));
 final int step_y = (int)max(s*5, (s*15/mode));
 final int gene_size = 100;
@@ -69,38 +69,10 @@ class Gene implements Comparable {
 			tri_y[2] = min_y;
 			tri_x[1] = max_x;
 			tri_x[1] = max_y;
-			for(int c=0; c<8; c+=2) {
+			for(int c=0; c<8; c+=1) {
 				byte bit = (byte)((gene[i]>>c)&3);
-				switch(bit) {
-					case 0:
-						y += step_y;
-						break;
-					case 1:
-						y -= step_y;
-						break;
-					case 2:
-						x += step_x;
-						break;
-					case 3:
-						x -= step_x;
-						break;
-					case 4:
-						x += step_x;
-						y += step_y;
-						break;
-					case 5:
-						x -= step_x;
-						y += step_y;
-						break;
-					case 6:
-						x += step_x;
-						y -= step_y;
-						break;
-					case 7:
-						x -= step_x;
-						y -= step_y;
-						break;
-				}
+				x += stepX(bit);
+				y += stepY(bit);
 				tri_x[0] = x;
 				tri_y[0] = y;
 
@@ -148,6 +120,33 @@ class Gene implements Comparable {
 		pointMutation(1.0/(float)gene.length*8);
 	}
 
+	int stepX(byte bit) {
+		switch(bit) {
+			case 0:
+				return step_x;
+			case 1:
+				return -step_x;
+			case 2:
+				return step_x;
+			default:
+				return -step_x;
+		}
+
+	}
+
+	int stepY(byte bit) {
+		switch(bit) {
+			case 0:
+				return -step_y;
+			case 1:
+				return -step_y;
+			case 2:
+				return step_y;
+			default:
+				return step_y;
+		}
+	}
+
 	void draw(PGraphics g) {
 		// int x=-g.width/2, y=-g.height/2;
 		int x=0, y=0;
@@ -158,41 +157,14 @@ class Gene implements Comparable {
 		// g.stroke(#333333, 128);
 		// g.strokeWeight(5);
 		g.noStroke();
-		g.fill(#ff0000, 64);
+		g.fill(#ff0F90, 64);
 		g.beginShape(TRIANGLE_STRIP);
 		for(int i=0; i<gene.length; i++) {
 			for(int c=0; c<8; c+=2) {
 				byte bit = (byte)((gene[i]>>c)&3);
-				switch(bit) {
-					case 0:
-						y += step_y;
-						break;
-					case 1:
-						y -= step_y;
-						break;
-					case 2:
-						x += step_x;
-						break;
-					case 3:
-						x -= step_x;
-						break;
-					case 4:
-						x += step_x;
-						y += step_y;
-						break;
-					case 5:
-						x -= step_x;
-						y += step_y;
-						break;
-					case 6:
-						x += step_x;
-						y -= step_y;
-						break;
-					case 7:
-						x -= step_x;
-						y -= step_y;
-						break;
-				}
+				x += stepX(bit);
+				y += stepY(bit);
+
 				if (x < -g.width/2 || x > g.width/2 || y < -g.height/2 || y > g.height/2) {
 					g.endShape();
 					g.endDraw();
@@ -249,7 +221,7 @@ Gene binaryTournament(Gene[] pop) {
 }
 
 void setup() {
-	size((int)(500*s), (int)(400*s));
+	size((int)(500*s), (int)(500*s));
 	smooth();
 	noStroke();
 	// frameRate(1);
@@ -261,11 +233,20 @@ void setup() {
 	patch = createGraphics(width/mode, height/mode);
 	patch.stroke(#333333);
 
-	targetPixels = gene_size*4;
+	targetPixels = gene_size*8;
 }
 
 void draw() {
 	int x=0, y=0;
+	if (keyPressed) {
+		if (key == ' ') {
+			for(int i=0; i<population.length; i++) {
+				population[i] = randomGene();
+			}
+		} if (key == ENTER) {
+			saveFrame("#####.png");
+		}
+	}
 	background(#efefef);
 
 	for(int i=0; i<population.length; i++) {
@@ -301,8 +282,16 @@ void draw() {
 	if (mode == 1) {
 		population[0].draw(patch);
 		image(patch, 0, 0);
+		fill(#ff0F90, 128);
+		beginShape(QUAD);
+		vertex(0, height/2 - 6);
+		vertex(90, height/2 - 6);
+		vertex(100, height/2 + 6);
+		vertex(0, height/2 + 6);
+		endShape();
 		fill(#333333);
-		text(str(population[0].fitness), 5, height/2);
+		textSize(10);
+		text(str(population[0].fitness), 16, height/2+4);
 	}
 
 	reproduce(selection, children);
