@@ -1,8 +1,10 @@
 import java.util.*;
 
 final float p_crossover = 0.98;
-final int step_x = 5;
-final int step_y = 5;
+final float p_newGeneRate = 0.1;
+final float s = 1.5;
+final int step_x = (int)(5*s);
+final int step_y = (int)(5*s);
 final int gene_size = 100;
 
 Gene randomGene() {
@@ -71,7 +73,7 @@ class Gene implements Comparable {
 					fitness = (float)pixelCount / (float)target;
 					return;
 				}
-				++pixelCount;
+				pixelCount += step_x;
 			}
 		}
 		fitness = (float)pixelCount / (float)target;
@@ -151,7 +153,7 @@ class Gene implements Comparable {
 					g.endDraw();
 					return;
 				}
-				g.vertex(x, y);
+				g.curveVertex(x, y);
 			}
 		}
 		g.endShape(CLOSE);
@@ -202,7 +204,7 @@ Gene binaryTournament(Gene[] pop) {
 }
 
 void setup() {
-	size(500, 400);
+	size((int)(500*s), (int)(400*s));
 	smooth();
 	noStroke();
 	// frameRate(1);
@@ -211,7 +213,7 @@ void setup() {
 		population[i] = randomGene();
 	}
 
-	patch = createGraphics(50, 40);
+	patch = createGraphics((int)(50*s), (int)(40*s));
 	patch.stroke(#333333);
 
 	targetPixels = patch.width * patch.height;
@@ -237,7 +239,7 @@ void draw() {
 		// fill(#efefef, 200);
 		// rect(x, y, patch.width, patch.height);
 		fill(#333333);
-
+		textSize(8);
 		text(str(population[i].fitness), x+5, y+patch.height/2-12, patch.width-5, patch.height/2+12);
 		x += patch.width;
 		if (x > (width - patch.width)) {
@@ -252,11 +254,10 @@ void draw() {
 
 	for(int i=0; i<population.length; i++) {
 		population[i] = children[i];
+		if (random(1.0) < p_newGeneRate) {
+			population[i] = randomGene();
+		}
 	}
 
-	if (random(1.0) >= p_crossover) {
-		// Very occasionally a new gene enters the pool
-		population[population.length-1] = randomGene();
-	}
-	saveFrame("#####.png");
+	// saveFrame("#####.png");
 }
