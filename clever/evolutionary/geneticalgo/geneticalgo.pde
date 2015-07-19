@@ -68,7 +68,7 @@ class Gene implements Comparable {
 			tri_x[2] = min_x;
 			tri_y[2] = min_y;
 			tri_x[1] = max_x;
-			tri_x[1] = max_y;
+			tri_y[1] = max_y;
 			for(int c=0; c<8; c+=1) {
 				byte bit = (byte)((gene[i]>>c)&3);
 				x += stepX(bit);
