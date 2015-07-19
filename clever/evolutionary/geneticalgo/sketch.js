@@ -159,7 +159,7 @@ Gene.prototype.calculateFitness = function (w, h, target) {
 			area = calculateArea(tri_x, tri_y);
 			totalArea += area;
 			if (x < -w || x > w || y < -h || y > h) {
-				this.doFitness(area, -targetArea);
+				this.doFitness(totalArea, -targetArea);
 				return;
 			}
 			min_x = Math.min(min_x, x);
@@ -229,7 +229,7 @@ function setup() {
 
 	targetPixels = gene_size*8;
 	pink = color('rgba(255, 15, 144, .5)');
-	fadedPink = color('rgba(255, 15, 144, .25)');
+	fadedPink = color('rgba(255, 15, 144, .1)');
 }
 
 function drawLabel(fitness) {
